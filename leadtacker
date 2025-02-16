@@ -1,0 +1,558 @@
+
+
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(ggtext)
+library(ggimage)
+
+# data --------------------------------------------------------------------
+
+
+clubs <- readRDS("/Users/ivo/R/RStudio/ACB/2024/acb_df.rds") %>%
+  select( equipo =nombre, abb, logo, color) %>%
+  mutate(abb = case_when(
+    equipo == "Bàsquet Girona"~"GIR",
+    equipo ==  "BAXI Manresa"~"BAX",
+    TRUE~abb
+  ),
+  logo = case_when(
+    equipo == "UCAM Murcia" ~ "https://static.acb.com/img/www/clubes2024/2425UCAMMurciapositivo.png",
+    equipo == "Coviran Granada" ~"https://static.acb.com/img/www/clubes2023/coviran-granada_logopositivo.png",
+    TRUE ~ logo
+  ),
+  color = ifelse(equipo == "Real Madrid", "#FEBE10", color))
+
+
+twitter <- "<span style='color:#000000;font-family: \"Font Awesome 6 Brands\"'>&#xE61A;</span>"
+tweetelcheff <- "<span style='font-weight:bold;'>*@elcheff*</span>"
+insta <- "<span style='color:#E1306C;font-family: \"Font Awesome 6 Brands\"'>&#xE055;</span>"
+instaelcheff <- "<span style='font-weight:bold;'>*@sport_iv0*</span>"
+github <- "<span style='color:#000000;font-family: \"Font Awesome 6 Brands\"'>&#xF092;</span>"
+githubelcheff <- "<span style='font-weight:bold;'>*IvoVillanueva*</span>"
+caption <- glue("<br><br><br>**Datos**: *@ACBCOM Play By Play* • **Gráfico**: *Ivo Villanueva* • {twitter} {tweetelcheff} • {insta} {instaelcheff} • {github} {githubelcheff}")
+
+supercopa_2324_1 <- readRDS(here::here("2025","PlayByPlay", "supercopa2024", "rds", "pbp_sc2024_25.rds")
+)
+
+
+# wrangle -----------------------------------------------------------------
+# 103818,103817, 103816, 103815, 103814, 103813
+
+
+
+match <- c(104359)
+
+
+
+
+#nombres equipos
+name_local <-supercopa_2324_1%>%
+  filter(id_match == match, local == TRUE) %>%
+  select(team_team_actual_short_name) %>%
+  drop_na() %>%
+  unique() %>%
+  pull()
+
+name_away <- supercopa_2324_1 %>%
+  filter(id_match == match, local == FALSE) %>%
+  select(team_team_actual_short_name) %>%
+  drop_na() %>%
+  unique() %>%
+  pull()
+#jornada
+# week <- supercopa_2324_1 %>%
+#   filter(id_match == match) %>%
+#   select(matchweek_number) %>%
+#   drop_na() %>%
+#   unique() %>%
+#   pull()
+#logos
+# logo_local <- pbp_acb_24 %>%
+#   filter(id_match == match, local == TRUE) %>%
+#   inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+#   select(logo, team_team_abbrev_name)%>%
+#   mutate(
+#     logo = case_when(
+#       team_team_abbrev_name %in% c("UCM", "BKN", "BAX", "DGC", "JOV", "COV") ~ glue::glue("<img src='{logo}' width='65'/>"),
+#       TRUE ~ glue::glue("<img src='{logo}' width='60'/>")
+#     )) %>%
+#   drop_na() %>%
+#   select(logo) %>%
+#   unique() %>%
+#   pull()
+#
+# logo_away <- pbp_acb_24 %>%
+#   filter(id_match == match, local == FALSE) %>%
+#   inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+#   select(logo, team_team_abbrev_name)%>%
+#   mutate(
+#     logo = case_when(
+#       team_team_abbrev_name %in% c("UCM", "BKN", "BAX", "DGC", "JOV", "COV") ~ glue::glue("<img src='{logo}' width='65'/>"),
+#       TRUE ~ glue::glue("<img src='{logo}' width='60'/>")
+#     )) %>%
+#   drop_na() %>%
+#   select(logo) %>%
+#   unique() %>%
+#   pull()
+
+logo_local <- supercopa_2324_1 %>%
+  filter(id_match == match, local == TRUE) %>%
+  inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+  select(logo)%>%
+  unique() %>%
+  pull()
+
+
+logo_away <-supercopa_2324_1 %>%
+  filter(id_match == match, local == FALSE) %>%
+  inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+  select(logo)%>%
+  unique() %>%
+  pull()
+
+
+#colores
+color_local <- supercopa_2324_1 %>%
+  filter(id_match == match, local == TRUE) %>%
+  inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+  select(color) %>%
+  unique() %>%
+  pull()
+
+color_away <- supercopa_2324_1 %>%
+  filter(id_match == match, local == FALSE) %>%
+  inner_join(clubs, by=c("team_team_abbrev_name" = "abb")) %>%
+  select(color) %>%
+  unique() %>%
+  pull()
+
+sc_local <- supercopa_2324_1 %>%
+  filter(id_match == match) %>%
+  mutate(sc = max(score_local)) %>%
+  select(sc) %>%
+  unique() %>%
+  pull()
+
+sc_away <-  supercopa_2324_1 %>%
+  filter(id_match == match) %>%
+  mutate(sc = max(score_visitor)) %>%
+  select(sc) %>%
+  unique() %>%
+  pull()
+#titulo
+
+#title <- glue("<span style='font-weight:bold;font-variant:small-caps;horizontal-align:left;vertical-align:middle;font-size:53px'>{name_local}</span> {logo_local} {sc_local}   {sc_away} {logo_away} {name_away}")
+
+#diferencias
+
+p <- supercopa_2324_1 %>%
+  select(id_match, team_team_abbrev_name, period, crono, local = score_local, away = score_visitor) %>%
+  filter(id_match == match) %>%
+  mutate(
+    crono = hms(crono),
+    home_adv = local- away,
+    time = ifelse(period <= 4, as.duration(10 * 60) - as.duration(crono),
+                  as.duration(4 * 60) - as.duration(crono)),
+    time = ifelse(period <= 4,
+                  time + as.duration(10 * 60 * (period - 1)),
+                  time + as.duration(10 * 60 * 4) +
+                    as.duration(5 * 60 * (period - 5))),
+    home_lead = pmax(home_adv, 0),
+    away_lead = pmin(home_adv, 0),
+    visitor_lead= (away_lead)
+  ) %>% drop_na()
+
+df_extraSteps <- p %>% mutate(home_adv = lag(home_adv),
+                              home_lead= lag(home_lead),
+                              visitor_lead= lag(away_lead)) %>%
+  replace(is.na(.),0)
+
+df2 <- rbind(df_extraSteps, p) %>%
+  arrange(time)
+
+#rango
+lab <- round(max(c(abs(max(p$home_adv)), abs(min(p$home_adv)), abs(max(p$away_lead)), abs(min(p$away_lead)))) / .05) * .05
+
+# obtener rango diferencial de puntuación (redondear al 5 más cercano)
+
+ymax <- round(lab* 2, digits = -1) / 2
+ymin <- round(-lab* 2, digits = -1) / 2
+ymin_lab <- abs(round(-lab* 2, digits = -1) / 2)
+
+# obtener posiciones y períodos
+
+periods <- unique(p$period)
+x_value <- ifelse(periods <= 4, 10 * 60 * periods,
+                  10 * 60 * 4 + 5 * 60 * (periods - 4))
+x_label <- ifelse(periods <= 4, paste0("Q", periods),paste0("OT", periods - 4))
+y_value <- seq(ymin-5, ymax+5, 5)
+
+# simple game
+p1 <- ggplot() +
+  geom_ribbon(data = df2, aes(x = time, ymin = 0, ymax = home_lead), fill = color_local ) +
+  geom_ribbon(data = df2, aes(x = time, ymin = visitor_lead, ymax = 0), fill = color_away ) +
+  geom_vline(aes(xintercept = x_value), linetype = 2, linewidth = .5, col = "grey", size = .5) +
+  geom_hline(aes(yintercept = y_value), linetype = 2, col = "grey") +
+  geom_image(aes(x = 200, y = ymax+1 , image = logo_local),
+             size = case_when(name_local %in% c("Casademont Zgz", "Monbus Obra", "Real Madrid")~.17,
+                              name_local %in% c("Dreamland GC", "Unicaja")~.18,
+                              name_local %in% c( "MoraBanc And","UCAM Murcia" )~.23,
+                              name_local %in% c( "BAXI Manresa", "Lenovo Tenerife", "Bàsquet Girona", "Zunder Palencia")~ .24))+ #zaragoza
+
+  geom_image(aes(x = 200, y = ymin-1 , image = logo_away),
+             size = case_when(name_away %in% c("MoraBanc And", "Casademont Zgz","Valencia Basket", "Baskonia","UCAM Murcia", "Joventut")~.22,
+                              name_away %in% c( "Monbus Obra", "Unicaja", "Barça")~.17,
+                              name_away %in% c("Surne Bilbao", "Bàsquet Girona","Río Breogán" )~ .22)) +
+  #morabanc
+  annotate(geom = "text", x = 20 + seq(5, 1805, by = 600), y = ymin - 6, label = paste0("Q", 1:4), size = 5.5, color = "black", family = "Roboto Condensed", fontface = "bold") +
+  annotate(geom = "text", x = 30, y = ifelse(y_value > 0, y_value - .7, y_value + .7), label = abs(y_value), size = 5, color = "black", family = "Source Sans Pro") +
+  scale_y_continuous( breaks = seq(ymin-5, ymax+5, 5),expand = c(0, 0)) +
+  labs(
+    title = ifelse(sc_local > sc_away, glue("<span style='color:black'>{name_local} {sc_local}</span> - <span style='color:gray'>{sc_away} {name_away}</span>"),
+                   glue("<span style='color:gray'>{name_local} {sc_local}</span> - <span style='color:black'>{sc_away} {name_away}</span>")),
+    subtitle = paste0("Supercopa '24"),
+    caption = caption,
+    y = ""
+  ) +
+  coord_cartesian(ylim = c(ymin-5, ymax+5), expand = T, clip = "off") +
+  scale_x_continuous(breaks = x_value, labels = x_label, expand = c(0, 0)) +
+  theme_minimal() +
+  theme(
+    plot.background = element_rect("white"),
+    plot.title = element_markdown(color = "black", family = "Roboto Condensed",hjust = .5,margin = margin(t = -1.75, unit = "cm"), face = "bold", size = rel(4)),
+    plot.subtitle = element_text(color = "black", family = "Roboto Condensed", hjust = .5,vjust = 1, face = "bold", size = rel(2)),
+    plot.caption = element_markdown(size = 8.5, hjust = .5, color = "black", family = "Chivo"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.margin = margin(c(3, 1, 2, 1), unit = "cm")
+  )
+ggsave(glue("led_tracker{match}.png"), p1, w = 9 * 1.618, h = 9)
+
+
+# plot con todos los partidos ---------------------------------------------
+
+
+
+
+iddf_df2 <- readRDS(here::here("2025", "PlayByPlay","acb2425", "rds", "iddf_df25.rds")) |>
+  select(id_match = id, week_description, matchweek_number) #para unir con el play by play y así poder filtrar por jornadas
+
+pbp_acb_25 <- readRDS( here::here("2025", "PlayByPlay","acb2425", "rds", "pbp_Df2025.rds")
+)|>
+  left_join(iddf_df2)
+
+week <-7
+
+
+p <- pbp_acb_25 %>%
+  select(id_match, team_team_abbrev_name, local_away = local,  period, crono, local = score_local, away = score_visitor, matchweek_number) %>%
+  filter(matchweek_number == week) %>%
+  mutate(
+    crono = hms(crono),
+    home_adv = local- away,
+    time = ifelse(period <= 4, as.duration(10 * 60) - as.duration(crono),
+                  as.duration(4 * 60) - as.duration(crono)),
+    time = ifelse(period <= 4,
+                  time + as.duration(10 * 60 * (period - 1)),
+                  time + as.duration(10 * 60 * 4) +
+                    as.duration(5 * 60 * (period - 5))),
+    home_lead = pmax(home_adv, 0),
+    away_lead = pmin(home_adv, 0),
+    visitor_lead= (away_lead)
+  ) %>% drop_na()
+
+idmatch <- unique(p$id_match)
+
+
+ides <- function(idmatch){
+  p1 <- p %>%
+    filter(id_match == idmatch) %>%
+    inner_join(clubs, by = c("team_team_abbrev_name" ="abb"))
+
+  df_extraSteps <- p1 %>%
+    mutate(
+      home_adv = lag(home_adv),
+      home_lead= lag(home_lead),
+      visitor_lead= lag(away_lead))
+
+  df <- rbind(df_extraSteps, p1) %>%
+    arrange(time)
+
+}
+
+
+score <-   pbp_acb_25 %>%
+  filter(matchweek_number == week) %>%
+  group_by(id_match, team_team_abbrev_name, team_team_actual_short_name, local) %>%
+  summarise(sc_local = max(score_local),
+            sc_away = max(score_visitor)) %>%
+  filter(!is.na(team_team_abbrev_name)) %>%
+  ungroup() %>%
+  mutate(local= ifelse(local == TRUE, "home", "away"))
+
+sc1 <- score %>%
+  filter(local == "home") %>%
+  select(id_match,home = team_team_actual_short_name, sc_local )
+
+score_1 <- score %>%
+  filter(local == "away") %>%
+  select(id_match,away = team_team_actual_short_name, sc_away ) %>%
+  inner_join(sc1) %>%
+  # mutate(fancy_score= ifelse(sc_local >sc_away, glue("<span style='color:black'>{home} {sc_local}</span> - <span style='color:gray'>{sc_away} {away}</span>"),
+  #                            glue("<span style='color:gray'>{home} {sc_local}</span> - <span style='color:black'>{sc_away} {away}</span>")))
+mutate(fancy_score= case_when (
+     sc_local >sc_away ~  glue("<span style='color:black'>{home} {sc_local}</span> - <span style='color:gray'>{sc_away} {away}</span>"),
+     sc_local <sc_away ~ glue("<span style='color:gray'>{home} {sc_local}</span> - <span style='color:black'>{sc_away} {away}</span>"),
+     sc_local  == sc_away ~ glue("<span style='color:gray'>{home} {sc_local}</span> - <span style='color:gray'>{sc_away} {away}</span>") ) )
+
+
+
+
+
+df2 <- map_df(idmatch, ides) %>%
+  arrange(id_match) %>%
+  left_join(score_1 %>% select(id_match, fancy_score))
+# p %>% filter(id_match == 103715) %>%
+#   select(time) %>%
+#   mutate(maximo =max(time))
+
+
+
+
+df3 <- df2 %>%
+  inner_join(clubs, by = c("team_team_abbrev_name" ="abb")) %>%
+  select(id_match, team_team_abbrev_name, local_away) %>%
+  group_by(id_match, team_team_abbrev_name, local_away) %>%
+  distinct() %>%
+  inner_join(clubs, by = c("team_team_abbrev_name" ="abb")) %>%
+  ungroup() %>%
+  inner_join(score_1)
+
+
+
+
+#rango
+lab <- round(max(c(abs(max(p$home_adv)), abs(min(p$home_adv)), abs(max(p$away_lead)), abs(min(p$away_lead)))) / .05) * .05
+
+# obtener rango diferencial de puntuación (redondear al 5 más cercano)
+
+ymax <- round(lab* 2, digits = -1) / 2
+ymin <- round(-lab* 2, digits = -1) / 2
+
+# obtener posiciones y períodos
+
+periods <- unique(p$period)
+x_value <- ifelse(periods <= 4, 10 * 60 * periods,
+                  10 * 60 * 4 + 5 * 60 * (periods - 4))
+x_label <- ifelse(periods <= 4, paste0("Q", periods),paste0("OT", periods - 4))
+y_value <- seq(ymin-5, ymax+5, 5)
+
+
+match18 <- unique(df2 %>%select(fancy_score)) %>% pull()
+color18 <- unique(df2 %>%select(color)) %>% pull()
+
+p2 <-
+  ggplot() +
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[1]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[1] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[1]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[1] & local_away == FALSE) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[2]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[2] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[2]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[2] & local_away == FALSE ) %>% select(color)) %>% pull()) +
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[3]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[3] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[3]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[3] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[4]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[4] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[4]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[4] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[5]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[5] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[5]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[5] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[6]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[6] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[6]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[6] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[7]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[7] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[7]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[7] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[8]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[8] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[8]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[8] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[9]), aes(x = time, ymin = 0, ymax = home_lead), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[9] & local_away == TRUE ) %>% select(color)) %>% pull())+
+  geom_ribbon(data = df2 %>%filter(fancy_score == match18[9]), aes(x = time, ymin = visitor_lead, ymax = 0), color = "black", fill = unique(df2 %>% filter(fancy_score == match18[9] & local_away == FALSE ) %>% select(color)) %>% pull())+
+  geom_image(data = df3,
+             aes(x = 300, y = 25, image = logo),
+             size = case_when(df3$local_away == TRUE & df3$team_team_abbrev_name %in% c("RMB", "UNI", "BAR", "VBC", "CAZ")~.12,
+                              df3$local_away == TRUE & df3$team_team_abbrev_name %in% c( "MOB" )~.13,
+                              df3$local_away == TRUE & df3$team_team_abbrev_name %in% c("DGC", "BAX", "SBB", "COR","LLT", "BKN", "JOV")~.14,
+                              df3$local_away == TRUE & df3$team_team_abbrev_name %in% c("BRE","GIR")~.16,
+                              df3$local_away == TRUE & df3$team_team_abbrev_name %in% c( "ZPA", "COV", "UCM" )~.18,
+                              df3$local_away == TRUE & df3$team_team_abbrev_name %in% c( "MBA", "HIO" ) ~ .19),
+             asp =16/9)  +
+  geom_image(data = df3,
+             aes(x = 300, y = -25, image = logo),
+             size = case_when(df3$local_away == FALSE & df3$team_team_abbrev_name %in% c("RMB", "UNI", "BAR", "VBC", "CAZ")~.12,
+                              df3$local_away == FALSE & df3$team_team_abbrev_name %in% c("MOB" )~.13,
+                              df3$local_away == FALSE & df3$team_team_abbrev_name %in% c("DGC", "BAX",  "COR","SBB","LLT",  "JOV",  "BKN")~.14,
+                              df3$local_away == FALSE & df3$team_team_abbrev_name %in% c("BRE", "GIR")~.16,
+                              df3$local_away == FALSE & df3$team_team_abbrev_name %in% c( "ZPA", "COV","UCM" )~.18,
+                              df3$local_away == FALSE & df3$team_team_abbrev_name %in% c( "MBA", "HIO" ) ~ .19),
+             asp =16/9)  +
+  scale_fill_identity()+
+  scale_y_continuous(labels = c("40", "30", "20", "10"," ", "10", "20","30", "40"), breaks = seq(-40, 40, 10), expand = c(0,0))+
+  scale_x_continuous(labels = c("Q1",  "Q2", "Q3","Q4", "Q5"), breaks = c(0, 600,  1200,  1800, 2400), expand = c(0,0))+
+  geom_vline(xintercept =  c(0, 600,  1200,  1800, 2400), linetype = 2, linewidth = .2, col = "black", size = .5) +
+  geom_hline(yintercept = seq(-40, 40, 10), linetype = 2, linewidth = .2, col = "grey") +
+  facet_wrap(~ fct_reorder(fancy_score, -id_match),  nrow = 3)+
+  theme_minimal() +
+  labs(
+    title = "ACB Lead Tracker",
+    subtitle = paste0("2024/25 Jornada ", week),
+    caption = caption,
+    y = ""
+  ) +
+  theme( plot.background = element_rect("white"),
+         plot.title = element_markdown(color = "black", family = "Roboto Condensed",hjust = .5,margin = margin(t = -2, unit = "cm"), face = "bold", size = rel(4.5)),
+         plot.subtitle = element_text(color = "black", family = "Roboto Condensed", hjust = .5,vjust = 3, face = "bold", size = rel(2.5)),
+         plot.caption = element_markdown(size = 9.5, hjust = .5, color = "black", family = "Chivo"),
+         axis.title.x = element_blank(),
+         strip.text.x = element_markdown(face = "bold", family = "Roboto Condensed", size = 16.5, hjust = 0.5),
+         axis.text.x = element_text(family = "Roboto Condensed",face = "bold", size = 6.5),
+         axis.text.y = element_text(family = "Roboto Condensed",face = "bold", size = 6.5),
+         panel.grid.minor.x = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         plot.margin = margin(c(3.5, .5, 1.5, .5), unit = "cm")
+
+  )
+
+
+ggsave(glue("led_tracker{week}.png"), p2, w = 9 * 1.4, h = 9)
+
+mutate( team = ifelse(eq %in% c("RMB", "BAR", "MOB", "UNI", "VBC", "CAZ"), paste0(link_to_img(logo),'<br>', eq), paste0(link_to_img1(logo),'<br>', eq)))|>
+
+  # parte del tutorial ------------------------------------------------------
+
+#
+# library(lubridate)
+# library(rvest)
+# library(stringr)
+# library(tidyverse)
+#
+# # get webpage
+# url <- "https://www.basketball-reference.com/boxscores/pbp/201812100PHO.html"
+# webpage <- read_html(url)
+#
+# # pull out the events from the play-by-play table
+# events <- webpage %>%
+#   html_nodes("#pbp") %>%
+#   html_nodes("tr") %>%
+#   html_text()
+#
+#
+# # get event times & scores
+# times  <- str_extract(events, "^\\d+:\\d+.\\d+")
+# scores <- str_extract(events, "[\\+]*\\d+-\\d+[\\+]*")
+# scores <- ifelse(str_detect(scores, "\\+"), scores, NA)
+#
+# df <- data.frame(time = times, score = scores, stringsAsFactors = FALSE) %>%
+#   na.omit()
+#
+# # remove the +'s
+# parseScore <- function(x) {
+#   if (startsWith(x, "+")) {
+#     return(str_sub(x, 3, str_length(x)))
+#   } else if (endsWith(x, "+")) {
+#     return(str_sub(x, 1, str_length(x) - 1))
+#   } else {
+#     return(x)
+#   }
+# }
+# df$score <- sapply(df$score, parseScore)
+#
+# # split score into visitor and home score, get home advantage
+# df <- df %>%
+#   separate(score, into = c("visitor", "home"), sep = "-") %>%
+#   mutate(visitor = as.numeric(visitor),
+#          home = as.numeric(home),
+#          time = ms(time)) %>%
+#   mutate(visitor_adv = visitor - home)
+#
+#
+# # get period of play (e.g. Q1, Q2, ...)
+# df$period <- NA
+# period <- 0
+# prev_time <- ms("0:00")
+# for (i in 1:nrow(df)) {
+#   curr_time <- df[i, "time"]
+#   if (prev_time < curr_time) {
+#     period <- period + 1
+#   }
+#   df[i, "period"] <- period
+#   prev_time <- curr_time
+# }
+#
+# # convert time such that it runs upwards. regular quarters are 12M long, OT
+# # periods are 5M long
+# df <- df %>% mutate(time = ifelse(period <= 4, as.duration(12 * 60) - as.duration(time), as.duration(5 * 60) - as.duration(time))) %>%
+#   mutate(time = ifelse(period <= 4,
+#                        time + as.duration(12 * 60 * (period - 1)),
+#                        time + as.duration(12 * 60 * 4) +
+#                          as.duration(5 * 60 * (period - 5))
+#   ))
+#
+#
+# ggplot() +
+#   geom_line(data = df, aes(x = time, y = visitor_adv)) +
+#   labs(title = "LAC @ PHX, 2018-12-10") +
+#   theme_minimal() +
+#   theme(plot.title = element_text(size = rel(1.5), face = "bold", hjust = 0.5))
+#
+#
+#
+# ggplot() +
+#   geom_step(data = df, aes(x = time, y = visitor_adv)) +
+#   labs(title = "LAC @ PHX, 2018-12-10") +
+#   theme_minimal() +
+#   theme(plot.title = element_text(size = rel(1.5), face = "bold", hjust = 0.5))
+#
+#
+#
+# df$visitor_lead <- pmax(df$visitor_adv, 0)
+# df$home_lead    <- pmin(df$visitor_adv, 0)
+#
+# df_extraSteps <- df %>% mutate(visitor_adv = lag(visitor_adv),
+#                                visitor_lead = lag(visitor_lead),
+#                                home_lead = lag(home_lead))
+# df2 <- bind_rows(df_extraSteps, df) %>%
+#   arrange(time)
+#
+# ggplot() +
+#   geom_ribbon(data = df2, aes(x = time, ymin = 0, ymax = visitor_lead), fill = "#F7174E") +
+#   geom_ribbon(data = df2, aes(x = time, ymin = home_lead, ymax = 0), fill = "#F16031") +
+#   labs(title = "LAC @ PHX, 2018-12-10") +
+#   theme_minimal() +
+#   theme(plot.title = element_text(size = rel(1.5), face = "bold", hjust = 0.5))
+# # get score differential range (round to nearest 5)
+# ymax <- round(max(df$visitor_adv) * 2, digits = -1) / 2
+# ymin <- round(min(df$visitor_adv) * 2, digits = -1) / 2
+#
+# # get period positions and labels
+# periods <- unique(df$period)
+# x_value <- ifelse(periods <= 4, 12 * 60 * periods,
+#                   12 * 60 * 4 + 5 * 60 * (periods - 4))
+# x_label <- ifelse(periods <= 4, paste0("Q", periods),
+#                   paste0("OT", periods - 4))
+#
+# ggplot() +
+#   geom_ribbon(data = df2, aes(x = time, ymin = 0, ymax = visitor_lead), fill = "#F7174E") +
+#   geom_ribbon(data = df2, aes(x = time, ymin = home_lead, ymax = 0), fill = "#F16031") +
+#   geom_vline(aes(xintercept = x_value), linetype = 2, col = "grey") +
+#   scale_y_continuous(limits = c(ymin, ymax)) +
+#   labs(title = "LAC @ PHX, 2018-12-10") +
+#   scale_x_continuous(breaks = x_value, labels = x_label) +
+#   theme_minimal() +
+#   theme(plot.title = element_text(size = rel(1.5), face = "bold", hjust = 0.5),
+#         axis.title.x = element_blank(), panel.grid.minor.x = element_blank(),
+#         panel.grid.minor.y = element_blank())
+# #
+# #  ggplot() +
+# #    geom_step(data = p, aes(x = time, y = home_adv)) +
+# #    labs(title = "LAC @ PHX, 2018-12-10") +
+# #    theme_minimal() +
+# #    theme(plot.title = element_text(size = rel(1.5), face = "bold", hjust = 0.5))
+#
